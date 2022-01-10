@@ -1,0 +1,69 @@
+WITH closed as(
+	SELECT 
+		q.name, 
+		s.name as service_name, 
+		t.id,
+		btrim(u.login, '@innopolis.ru') as login,
+		CASE 
+			WHEN ts.name = 'waiting on third party supplier' THEN 'third line'
+			WHEN ts.name like '%close%' THEN 'closed'
+			ELSE ts.name
+		END as state,
+		date_trunc('millenium',t.change_time) as date
+	FROM public.ticket t
+		left join queue q on q.id = t.queue_id
+		left join service s on s.id = t.service_id
+		left join ticket_state ts on ts.id = t.ticket_state_id
+		left join users u on u.id = t.responsible_user_id
+	where q.name like '%IT%' 
+		and ts.name like ('%close%')),
+count_closed as (
+	select 
+		state, 
+		date, 
+		count(id)
+from closed
+group by  state,date),
+
+temp as(
+	SELECT 
+		q.name, 
+		s.name as service_name, 
+		t.id,
+		trim(trailing '@innopolis.ru' from login) as login,
+		CASE 
+			WHEN ts.name = 'waiting on third party supplier' THEN 'third line'
+			ELSE ts.name
+		END as state
+	FROM public.ticket t
+		left join queue q on q.id = t.queue_id
+		left join service s on s.id = t.service_id
+		left join ticket_state ts on ts.id = t.ticket_state_id
+		left join users u on u.id = t.responsible_user_id
+	where q.name like '%IT%' 
+		and ts.name in ('closed successful')),
+count as (
+	select 
+		state, 
+		trim(trailing '@innopolis.ru' from login) as login, 
+		count(id)
+from temp
+group by  login, state)
+
+select 
+	state,
+	login,
+	count
+FROM count c
+
+UNION all
+
+select 
+	'Всего' as "state",
+	' ' as "login"
+	,sum(count)
+FROM count c
+	order by state desc, count desc
+	
+
+
