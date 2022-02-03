@@ -33,6 +33,3 @@ select
 from history h
 group by h.state, h.create_time
 order by  h.create_time,h.state
-
-
-ps.nikk178
