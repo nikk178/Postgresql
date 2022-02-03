@@ -1,0 +1,31 @@
+WITH temp as(
+	SELECT 
+		q.name, 
+		regexp_replace(s.name, 'support', '') as service_name,
+		t.id, 
+		CASE 
+			WHEN ts.id in ('1','4','11','13','14','15','16') THEN ''
+			ELSE ts.name
+		END as state
+	FROM public.ticket t
+		left join queue q on q.id = t.queue_id
+		left join service s on s.id = t.service_id
+		left join ticket_state ts on ts.id = t.ticket_state_id
+	where q.id = 7
+		and ts.id in ('1','4','6','7','8','11','13','14','15','16')),
+count as (
+	select 
+		state, 
+    coalesce(service_name, state) as service,
+		count(id)
+from temp
+group by state, service_name)
+
+select 
+	state,
+	service,
+	count
+FROM count
+
+	order by state asc, count desc
+	
