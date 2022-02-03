@@ -1,0 +1,17 @@
+with temp as (
+  SELECT 
+		regexp_replace(s.name, 'support', '') as service_name,
+		count(q.name)	as count
+	FROM public.ticket t
+		left join queue q on q.id = t.queue_id
+		left join service s on s.id = t.service_id
+	where s.id in ('1','2','3','4','5','6','7','8','9','11','12','13','14','15','16','18','19') 
+	
+	group by service_name)
+	
+select
+	 service_name,
+	 count 
+From temp
+
+	 order by count desc
