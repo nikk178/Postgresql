@@ -1,0 +1,60 @@
+WITH firstRespons as (
+SELECT 
+	t.id, 
+	t.create_time + time '03:00' as "create_time", 
+	min(th.create_time) + time '03:00' as "first_respons", 
+	ts.name
+FROM public.ticket_history th
+	left join public.ticket_history_type tht on tht.id = th.history_type_id
+	left join public.ticket t on t.id = th.ticket_id
+	left join public.ticket_state ts on t.ticket_state_id = ts.id
+where  tht.name = 'SendAnswer'
+group by t.id, ts.name),
+
+closedTime as (
+SELECT 
+	t.id as tid, 
+	max(th.create_time) + time '03:00' as "closed_time"
+FROM public.ticket_history th
+	left join public.ticket_history_type tht on tht.id = th.history_type_id
+	left join public.ticket t on t.id = th.ticket_id
+	left join public.ticket_state ts on t.ticket_state_id = ts.id
+where  th.name like '%closed%' and ts.name like '%closed%'
+group by t.id),
+
+metric_table as (
+select 
+	t.id,
+	t.title,
+	q.name as queue_name, 
+	s.name as service_name, 
+	fr.create_time,
+	date(fr.create_time) as date_create,
+	fr.first_respons,
+	date(fr.first_respons) as date_respons,
+	extract(year from fr.first_respons) - 2000 ||'/'||to_char(fr.first_respons, 'MM') as month_year_respons,
+	to_char(fr.first_respons, 'MM') as month_respons,
+	extract(quarter from fr.first_respons) as q_respons,
+	extract(year from fr.first_respons) as y_respons,
+	round(extract (epoch from (fr.first_respons - fr.create_time))::numeric/3600::numeric,3) as first_resp_h,
+	date(ctm.closed_time) as date_closed,
+	extract(month from ctm.closed_time) as month_closed,
+	extract(quarter from ctm.closed_time) as q_closed,
+	extract(year from ctm.closed_time) as y_closed,
+	ctm.closed_time,
+	round(extract (epoch from (ctm.closed_time - fr.create_time))::numeric/3600::numeric,3) as closed_h,
+	fr.name as state
+from public.ticket t
+	left join firstRespons fr on t.id = fr.id
+	left join closedTime ctm on ctm.tid = t.id
+	left join queue q on q.id = t.queue_id
+	left join service s on s.id = t.service_id)
+
+SELECT
+  month_respons as month,
+  month_year_respons as time_Time,
+  avg(first_resp_h)
+FROM
+  metric_table
+where queue_name like '%IT%' and first_resp_h is not null
+group by month_respons,month_year_respons
