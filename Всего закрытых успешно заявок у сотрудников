@@ -1,12 +1,14 @@
 WITH closed as(
 	SELECT 
-		q.name, 
-		s.name as service_name, 
+		q.name,
+		s.name as service_name,
 		t.id,
-		btrim(u.login, '@innopolis.ru') as login,
-		CASE 
-			WHEN ts.name = 'waiting on third party supplier' THEN 'third line'
-			WHEN ts.name like '%close%' THEN 'closed'
+		u.login as login,
+		CASE
+			WHEN ts.name like ('closed with workaround') THEN 'closed'
+			WHEN ts.name like ('closed unsuccessful') THEN 'closed'
+			WHEN ts.name like ('closed successful') THEN 'closed'
+			WHEN ts.name like ('merged') THEN 'closed'
 			ELSE ts.name
 		END as state,
 		date_trunc('day',t.change_time) as date
@@ -15,37 +17,43 @@ WITH closed as(
 		left join service s on s.id = t.service_id
 		left join ticket_state ts on ts.id = t.ticket_state_id
 		left join users u on u.id = t.responsible_user_id
-	where q.name like '%IT%' 
-		and ts.name like ('%close%')),
+	 left join ticket us on us.id = us.user_id
+	where u.id in ('40','16','13','17','19','31','42','44','53','54','55','61','62','72') 
+	    and ts.id in ('2','3','9','10')),
 count_closed as (
 	select 
 		state, 
 		date, 
+		service_name as service,
 		count(id)
 from closed
-group by  state,date),
+group by  state,date,service_name),
 
 temp as(
 	SELECT 
 		q.name, 
 		s.name as service_name, 
 		t.id,
-		trim(trailing '@innopolis.ru' from login) as login,
+		regexp_replace(login, '@innopolis.ru', '') as login,
 		CASE 
-			WHEN ts.name = 'waiting on third party supplier' THEN 'third line'
+			WHEN ts.name like ('closed with workaround') THEN 'closed'
+			WHEN ts.name like ('closed unsuccessful') THEN 'closed'
+			WHEN ts.name like ('closed successful') THEN 'closed'
+			WHEN ts.name like ('merged') THEN 'closed'
 			ELSE ts.name
 		END as state
 	FROM public.ticket t
 		left join queue q on q.id = t.queue_id
 		left join service s on s.id = t.service_id
 		left join ticket_state ts on ts.id = t.ticket_state_id
-		left join users u on u.id = t.responsible_user_id
-	where q.name like '%IT%' 
-		and ts.name in ('closed successful')),
+		left join users u on u.id = t.user_id
+	 left join ticket us on us.id = us.user_id
+	where u.id in ('40','16','13','17','19','31','42','44','53','54','55','61','62','72') 
+	    and ts.id in ('2','3','9','10')),
 count as (
 	select 
 		state, 
-		trim(trailing '@innopolis.ru' from login) as login, 
+		login as login, 
 		count(id)
 from temp
 group by  login, state)
@@ -56,14 +64,38 @@ select
 	count
 FROM count c
 
-UNION all
-
-select 
+  where login !='root@localhost'
+    and login !='monitoring@innopolis.university'
+    and login !='ma.kvaratskheliia'
+    and login !='adminotrs@localhost'
+    and login !='aleks.ivanov'
+    and login !='d.korobeynikov'
+    and login !='m.stoliarov'
+    and login !='m.faizerakhmanov'
+    and login !='d.dorofeev'
+    and login !='a.salakhov'
+    and login !='e.kurbangalieva'
+    and login !='b.sabirov'
+    and login !='i.malysheva'
+    and login !='a.gilyazov'
+    and login !='itesgroup'
+    and login !='y.tarasov'
+    and login !='d.ziablitsev'
+    and login !='v.barinov'
+    and login !='t.galimov'
+    and login !='iuchatbot'
+    and login !='r.akhmetzyanov'
+    and login !='r.mullayarov'
+    and login !='m.alishev'
+    and login !='a.khaliullin'
+    and login !='v.palenov'
+    and login !='d.gayazov'
+    
+    
+    UNION all
+    select 
 	'Всего' as "state",
-	' ' as "login"
+	'' as "login"
 	,sum(count)
 FROM count c
-	order by state desc, count desc
-	
-
-
+	order by state ASC, count desc
