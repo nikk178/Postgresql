@@ -1,0 +1,23 @@
+WITH temp as(
+	SELECT 
+		q.name, 
+		s.name as service_name,
+		t.title as ticket_name,
+		t.id,
+		u.login as login,
+		CASE 
+			WHEN ts.name = '' THEN ''
+			ELSE ts.name
+		END as state
+	FROM public.ticket t
+		left join queue q on q.id = t.queue_id
+		left join service s on s.id = t.service_id
+		left join ticket_state ts on ts.id = t.ticket_state_id
+		left join users u on u.id = t.responsible_user_id
+	where q.name like '%IT%' 
+		and ts.id in ('1','4','6','7','8','9','11','13','14','15','16'))
+Select 
+	ticket_name,
+	service_name,
+	state
+from temp
