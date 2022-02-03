@@ -1,0 +1,61 @@
+WITH closed as(
+	SELECT 
+		q.name, 
+		s.name as service_name, 
+		t.id,
+		btrim(u.login, '@innopolis.ru') as login,
+		CASE 
+			WHEN ts.name = 'waiting on third party supplier' THEN 'third line'
+			WHEN ts.name like '%close%' THEN 'closed'
+			ELSE ts.name
+		END as state,
+		date_trunc('day',t.change_time) as date
+	FROM public.ticket t
+		left join queue q on q.id = t.queue_id
+		left join service s on s.id = t.service_id
+		left join ticket_state ts on ts.id = t.ticket_state_id
+		left join users u on u.id = t.responsible_user_id
+	where q.name like '%IT%' 
+		and ts.name like ('%close%')),
+count_closed as (
+	select 
+		state, 
+		date, 
+		count(id)
+from closed
+group by  state,date),
+
+created as (
+	SELECT 
+		t.id,
+		'created' as state,
+		date_trunc('day',t.create_time) as date
+	FROM public.ticket t
+		left join queue q on q.id = t.queue_id
+		left join service s on s.id = t.service_id
+		left join ticket_state ts on ts.id = t.ticket_state_id
+		left join users u on u.id = t.responsible_user_id
+	where q.name like '%IT%' 
+),
+count_created as (
+	select 
+		state, 
+		date, 
+		count(id)
+from created
+group by  state,date)
+
+select 
+	state as metric,
+	date as time,
+	count as value
+FROM count_closed 
+
+union all
+select 
+	state as metric,
+	date as time,
+	count as value
+FROM count_created 
+
+order by time 
