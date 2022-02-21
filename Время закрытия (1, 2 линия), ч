@@ -1,0 +1,78 @@
+WITH firstRespons as (
+SELECT 
+	t.id, 
+	t.create_time + time '03:00' as "create_time", 
+	min(th.create_time) + time '03:00' as "first_respons", 
+	ts.name
+FROM public.ticket_history th
+	left join public.ticket_history_type tht on tht.id = th.history_type_id
+	left join public.ticket t on t.id = th.ticket_id
+	left join public.ticket_state ts on t.ticket_state_id = ts.id
+where  tht.name = 'SendAnswer'
+group by t.id, ts.name),
+
+closedTime as (
+SELECT  
+	t.id as tid, 
+	max(th.create_time) + time '03:00' as "closed_time",
+	th.name as h_name
+	, ts.name as state
+FROM public.ticket_history th
+	left join public.ticket_history_type tht on tht.id = th.history_type_id
+	left join public.ticket t on t.id = th.ticket_id
+	left join public.ticket_state ts on t.ticket_state_id = ts.id
+where  th.name like '%closed%'
+and th.name
+not like '%open%'
+and ts.name
+like '%closed%'
+and th.name
+not like '%third party supplier%'
+
+group by t.id,th.name,ts.name),
+
+metric_table as (
+select 
+	t.id,
+	t.title,
+	q.name as queue_name, 
+	s.name as service_name, 
+	fr.create_time,
+	date(fr.create_time) as date_create,
+	fr.first_respons,
+	date(fr.first_respons) as date_respons,
+	extract(month from fr.first_respons) as month_respons,
+	extract(quarter from fr.first_respons) as q_respons,
+	extract(year from fr.first_respons) as y_respons,
+	round(extract (epoch from (fr.first_respons - fr.create_time))::numeric/3600::numeric,3) as first_resp_h,
+	date(ctm.closed_time) as date_closed,
+	date_trunc('month', ctm.closed_time) as month_year_closed,
+	date_part('month', ctm.closed_time) as month_closed,
+	extract(quarter from ctm.closed_time) as q_closed,
+	extract(year from ctm.closed_time) as y_closed,
+	ctm.closed_time,
+	ctm.h_name,
+	round(extract (epoch from (ctm.closed_time - fr.create_time))::numeric/3600::numeric,3) as closed_h,
+	fr.name as state
+	,ctm.state
+from public.ticket t
+	left join firstRespons fr on t.id = fr.id
+	left join closedTime ctm on ctm.tid = t.id
+	left join queue q on q.id = t.queue_id
+	left join service s on s.id = t.service_id
+	where q.name not like '%3%' 
+
+)
+
+SELECT
+  month_closed as month,
+  month_year_closed as time,
+  ROUND(avg(closed_h),1) as value
+FROM
+  metric_table
+where queue_name like '%Dev%' and closed_h is not null and closed_h < 1000
+group by month_closed,month_year_closed,q_closed
+order by month_year_closed desc
+limit 12
+
+fvfg
