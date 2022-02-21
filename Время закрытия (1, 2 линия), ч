@@ -74,5 +74,3 @@ where queue_name like '%Dev%' and closed_h is not null and closed_h < 1000
 group by month_closed,month_year_closed,q_closed
 order by month_year_closed desc
 limit 12
-
-fvfg
