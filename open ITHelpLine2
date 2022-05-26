@@ -25,6 +25,4 @@ select
 	service,
 	count
 FROM count c
-
-
 	order by state asc, count desc
