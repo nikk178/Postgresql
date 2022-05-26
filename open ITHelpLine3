@@ -28,6 +28,3 @@ select
 FROM count
 
 	order by state asc, count desc
-	
-
-	dcdv
