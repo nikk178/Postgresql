@@ -1,18 +1,33 @@
 WITH temp as(
 	SELECT 
 		q.name, 
-		regexp_replace(s.name, 'support', '') as service_name,
 		t.id, 
+		s.name as service_name,
 		CASE 
-			WHEN ts.id in ('1','4','6','7','8','11','13','14','15','16') then ''
-			ELSE ts.name
+			WHEN s.id in ('1') THEN '1C'
+			WHEN s.id in ('3') THEN 'Database'
+			WHEN s.id in ('4') THEN 'Email'
+			WHEN s.id in ('7') THEN 'Hardware'
+			WHEN s.id in ('8') THEN 'Network'
+			WHEN s.id in ('10') THEN 'Portal'
+		    WHEN s.id in ('12') THEN 'Server'
+	        WHEN s.id in ('13') THEN 'Software'
+		    WHEN s.id in ('15') THEN 'Virtualization'
+		    WHEN s.id in ('16') THEN 'Websites'
+		    WHEN s.id in ('5') THEN 'End user'
+		    WHEN s.id in ('9') THEN 'Other'
+		    WHEN s.id in ('2') THEN 'Audio and Video'
+		    WHEN s.id in ('18') THEN 'Orders and Licenses'
+		    WHEN s.id in ('19') THEN 'Equipment delivery'
+		    WHEN s.id in ('11') THEN 'Print support'
+		    WHEN s.id in ('14') THEN 'Telephony and communications'
 		END as state
 	FROM public.ticket t
 		left join queue q on q.id = t.queue_id
 		left join service s on s.id = t.service_id
 		left join ticket_state ts on ts.id = t.ticket_state_id
 	where q.id = 6
-		and ts.id in ('1','4','6','7','8','11','13','14','15','16')),
+		and ts.id in ('1','4','6','7','11','13','14','15','16')),
 count as (
 	select 
 		state, 
